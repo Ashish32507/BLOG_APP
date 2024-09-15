@@ -1,2 +1,2 @@
-export const USER_API_END_POINT = "http://localhost:3000/user";
-export const POST_API_END_POINT = "http://localhost:3000/post";
+export const USER_API_END_POINT = "https://blog-app-qdrv.onrender.com/user";
+export const POST_API_END_POINT = "https://blog-app-qdrv.onrender.com/post";
