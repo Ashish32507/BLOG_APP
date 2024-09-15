@@ -43,7 +43,7 @@ const EditPostModal = ({ isOpen, onClose, postToEdit, onUpdate }) => {
 
     try {
       const response = await axios.put(
-        `http://localhost:3000/post/upate/${postToEdit._id}`,
+        `https://blog-app-qdrv.onrender.com/post/upate/${postToEdit._id}`,
         formDataToSend,
         {
           headers: {
