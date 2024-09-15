@@ -19,7 +19,7 @@ dbConnection();
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({ origin: "https://blog-app-qdrv.onrender.com", credentials: true }));
+app.use(cors({ origin: "https://blog-app-frontend-9z9y.onrender.com", credentials: true }));
 
 app.use(
   fileUpload({
