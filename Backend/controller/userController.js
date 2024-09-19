@@ -2,13 +2,23 @@ import { User } from "../model/UserSchema.js";
 import cloudinary from "cloudinary";
 import bcryptjs from "bcrypt";
 import jwt from "jsonwebtoken";
+import multer from "multer"; // Ensure multer is imported for image upload handling
 
+// Register User
 export const register = async (req, res) => {
   try {
     const { email, name, phone, password, role, education } = req.body;
     const { photo } = req.files;
 
-    // Check if photo exists
+    // Validate required fields
+    if (!email || !name || !phone || !password || !role || !education) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
+
+    // Check if photo is uploaded
     if (!photo) {
       return res.status(400).json({
         success: false,
@@ -21,27 +31,7 @@ export const register = async (req, res) => {
     if (!allowedFormats.includes(photo.mimetype)) {
       return res.status(400).json({
         success: false,
-        message: "Please upload a valid photo format (jpg, png)",
-      });
-    }
-
-    // Check for missing fields
-    if (!email || !name || !phone || !password || !role || !education) {
-      return res.status(400).json({
-        success: false,
-        message: "Some required fields are missing",
-      });
-    }
-
-    // Upload photo to Cloudinary
-    const cloudinaryResponse = await cloudinary.uploader.upload(
-      photo.tempFilePath
-    );
-    if (!cloudinaryResponse || cloudinaryResponse.error) {
-      console.error("Error in Cloudinary upload", cloudinaryResponse.error);
-      return res.status(500).json({
-        success: false,
-        message: "Photo upload failed",
+        message: "Please upload a valid photo format (JPEG/PNG)",
       });
     }
 
@@ -54,7 +44,17 @@ export const register = async (req, res) => {
       });
     }
 
-    // Hash the password
+    // Upload photo to Cloudinary
+    const cloudinaryResponse = await cloudinary.uploader.upload(photo.tempFilePath);
+    if (!cloudinaryResponse || cloudinaryResponse.error) {
+      console.error("Cloudinary upload error", cloudinaryResponse.error);
+      return res.status(500).json({
+        success: false,
+        message: "Photo upload failed",
+      });
+    }
+
+    // Hash password
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Create new user
@@ -71,7 +71,7 @@ export const register = async (req, res) => {
       education,
     });
 
-    // Prepare JWT payload
+    // Generate JWT token
     const tokenData = {
       id: newUser._id,
       email: newUser.email,
@@ -82,28 +82,20 @@ export const register = async (req, res) => {
       photo: newUser.photo.url,
     };
 
-    // Sign the token with expiration (e.g., 1 day)
-    const token = await jwt.sign(tokenData, process.env.SECRET_TOKEN, {
+    const token = jwt.sign(tokenData, process.env.SECRET_TOKEN, {
       expiresIn: "1d",
     });
 
-    // Respond with success message
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: {
-        id: newUser._id,
-        email: newUser.email,
-        name: newUser.name,
-        phone: newUser.phone,
-        role: newUser.role,
-        education: newUser.education,
-        photo: newUser.photo.url,
-        token: token,
+        ...tokenData,
+        token,
       },
     });
   } catch (err) {
-    console.error("Internal Error", err);
+    console.error("Internal error:", err);
     return res.status(500).json({
       success: false,
       message: "An internal error occurred",
@@ -111,11 +103,12 @@ export const register = async (req, res) => {
   }
 };
 
+// Login User
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
 
-    // Check if all required fields are provided
+    // Validate required fields
     if (!email || !password || !role) {
       return res.status(400).json({
         success: false,
@@ -123,10 +116,8 @@ export const login = async (req, res) => {
       });
     }
 
-    // Find user by email
+    // Check if user exists
     const user = await User.findOne({ email });
-
-    // If user is not found
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -143,7 +134,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Check if the role matches the user's role
+    // Verify role
     if (user.role !== role) {
       return res.status(403).json({
         success: false,
@@ -151,10 +142,7 @@ export const login = async (req, res) => {
       });
     }
 
-    // Remove the password from the user object before sending it in the response
-    const newUser = { ...user.toObject(), password: undefined };
-
-    // JWT payload data
+    // Generate JWT token
     const tokenData = {
       id: user._id,
       name: user.name,
@@ -163,30 +151,23 @@ export const login = async (req, res) => {
       role: user.role,
     };
 
-    // Generate JWT token with a 1-day expiration time
-    const token = jwt.sign(
-      tokenData, // Payload
-      process.env.SECRET_TOKEN, // Secret key from .env
-      { expiresIn: "1d" } // Token expires in 1 day
-    );
+    const token = jwt.sign(tokenData, process.env.SECRET_TOKEN, { expiresIn: "1d" });
 
-    // Set token in an HTTP-only, secure cookie
+    // Set token in an HTTP-only cookie
     res.cookie("authToken", token, {
-      httpOnly: true, // Prevent access via client-side JavaScript
-      secure: process.env.NODE_ENV === "production", // Send only over HTTPS in production
-      sameSite: "strict", // Mitigate CSRF attacks
-      maxAge: 24 * 60 * 60 * 1000, // Cookie expires in 1 day
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
     });
 
-    // Send response with the user details (without password)
     return res.status(200).json({
       success: true,
-      user: newUser,
+      user: { ...tokenData, token },
       message: "Login successful",
     });
   } catch (err) {
-    // Log internal server errors
-    console.error("Internal Error:", err);
+    console.error("Internal error:", err);
     return res.status(500).json({
       success: false,
       message: "An internal error occurred",
@@ -194,13 +175,13 @@ export const login = async (req, res) => {
   }
 };
 
+// Logout User
 export const logout = async (req, res) => {
   try {
-    // Clear the authToken cookie by setting its expiration to a past date
     res.clearCookie("authToken", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // Ensures cookie is only sent over HTTPS in production
-      sameSite: "strict", // Helps mitigate CSRF attacks
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
     });
 
     return res.status(200).json({
@@ -216,100 +197,96 @@ export const logout = async (req, res) => {
   }
 };
 
+// Get User Profile
 export const profile = async (req, res) => {
   try {
-    const userId = req?.user?.id;
-    const findUser = await User.findById(userId);
+    const userId = req.user?.id;
+    const user = await User.findById(userId).select("-password");
 
-    if (!findUser) {
+    if (!user) {
       return res.status(400).json({
         success: false,
-        message: "User Is Not Found",
+        message: "User not found",
       });
     }
 
-    const newUser = findUser.toObject();
-    newUser.password = undefined;
-
     return res.status(200).json({
       success: true,
-      profile: newUser,
-      message: "User Is Found",
+      profile: user,
+      message: "User found",
     });
   } catch (err) {
-    console.error("Error updating blog post:", err);
+    console.error("Profile error:", err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error.",
+      message: "Internal server error",
     });
   }
 };
 
+// Get Admins
 export const getAdmins = async (req, res) => {
   try {
-    const findUsers = await User.find({ role: "admin" });
+    const admins = await User.find({ role: "admin" }).select("-password");
 
-    if (findUsers.length === 0) {
-      return res.status(400).json({
+    if (!admins.length) {
+      return res.status(404).json({
         success: false,
         message: "No admins found",
       });
     }
 
-    // Remove passwords from the user objects
-    const usersWithoutPassword = findUsers.map((user) => {
-      const userObj = user.toObject();
-      delete userObj.password; // Ensure password is not included
-      return userObj;
-    });
-
     return res.status(200).json({
       success: true,
-      profile: usersWithoutPassword,
+      admins,
       message: "Admins found",
     });
   } catch (err) {
-    console.error("Error fetching admins:", err);
+    console.error("Get admins error:", err);
     return res.status(500).json({
       success: false,
-      message: "Internal server error.",
+      message: "Internal server error",
     });
   }
 };
 
+// Update User Profile
 export const updateUserProfile = async (req, res) => {
   try {
-    const storage = multer.memoryStorage();
-    const upload = multer({ storage: storage });
     const userId = req.user.id;
     const { name, email, phone, education } = req.body;
-    const image = req.file;
+    const photo = req.file;
 
     const user = await User.findById(userId);
-
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    user.name = name || user.name;
-    user.email = email || user.email;
-    user.phone = phone || user.phone;
-    user.education = education || user.education;
+    // Update fields if provided
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (phone) user.phone = phone;
+    if (education) user.education = education;
 
-    // Handle image upload
-    if (image) {
-      const result = await cloudinary.uploader.upload(image.path, {
+    // Handle photo update
+    if (photo) {
+      const result = await cloudinary.uploader.upload(photo.path, {
         folder: "user_images",
       });
       user.photo.url = result.secure_url;
     }
 
-    // Save updated user
     await user.save();
-
-    res.status(200).json({ message: "Profile updated successfully", user });
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: { ...user.toObject(), password: undefined },
+    });
   } catch (error) {
-    console.error("Error updating profile:", error);
-    res.status(500).json({ message: "Server error" });
+    console.error("Profile update error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 };
