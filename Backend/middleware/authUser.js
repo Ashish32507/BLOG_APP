@@ -1,4 +1,4 @@
-import { UserModel } from "../model/UserSchema.js";
+import { User } from "../model/UserSchema.js";
 import jwt from "jsonwebtoken";
 
 export const isAuthenticated = async (req, res, next) => {
@@ -24,7 +24,7 @@ export const isAuthenticated = async (req, res, next) => {
     console.log("Decoded Token:", decoded);
 
     // Find the user based on decoded token's `id`
-    const user = await UserModel.findById(decoded.id);
+    const user = await User.findById(decoded.id);
 
     if (!user) {
       return res.status(404).json({
