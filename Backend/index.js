@@ -7,6 +7,7 @@ import cloudinary from "cloudinary";
 import blogRoutes from "./routes/blogRoutes.js";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+
 // Initialize app and environment variables
 dotenv.config();
 const app = express();
@@ -19,7 +20,10 @@ dbConnection();
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({ origin: "https://blog-app-frontend-9z9y.onrender.com", credentials: true }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || "https://blog-app-frontend-9z9y.onrender.com", // Use environment variable for origin if available
+  credentials: true,
+}));
 
 app.use(
   fileUpload({
@@ -32,7 +36,7 @@ app.use(
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.API_KEY,
-  api_secret: process.env.API_SECRET_KEY, // Fixed typo
+  api_secret: process.env.API_SECRET, // Use `process.env.API_SECRET` for correct naming
 });
 
 // Routes
@@ -41,5 +45,5 @@ app.use("/post", blogRoutes);
 
 // Start the server
 app.listen(PORT, () => {
-  console.log(`Your Server Is Running On ${PORT}`);
+  console.log(`Your Server Is Running On Port ${PORT}`);
 });
