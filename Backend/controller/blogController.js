@@ -1,13 +1,20 @@
-import { Blog } from "../model/BlogModel.js";
-import { User } from "../model/UserSchema.js";
+import { Blog } from "../model/BlogModel.js"; // Ensure correct path
+import { User } from "../model/UserSchema.js"; // Ensure correct path
 import cloudinary from "cloudinary";
 
+// Cloudinary config (if needed, otherwise set in separate file)
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Create a blog
 export const createBlog = async (req, res) => {
   try {
     const { title, category, about } = req.body;
     const { blogImage } = req.files || {};
 
-    // Validate required fields
     if (!title || !category || !about) {
       return res.status(400).json({
         success: false,
@@ -15,7 +22,6 @@ export const createBlog = async (req, res) => {
       });
     }
 
-    // Validate the presence of a blog image
     if (!blogImage || !blogImage.mimetype) {
       return res.status(400).json({
         success: false,
@@ -23,7 +29,6 @@ export const createBlog = async (req, res) => {
       });
     }
 
-    // Validate image format
     const allowedFormats = ["image/jpeg", "image/png"];
     if (!allowedFormats.includes(blogImage.mimetype)) {
       return res.status(400).json({
@@ -32,7 +37,6 @@ export const createBlog = async (req, res) => {
       });
     }
 
-    // Ensure the user is authenticated
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -41,13 +45,10 @@ export const createBlog = async (req, res) => {
     }
 
     const adminName = req.user.name;
-    const adminImage = req.user.photo?.url; // Assuming photo is stored in `photo.url`
+    const adminImage = req.user.photo?.url;
     const createdBy = req.user.id;
 
-    // Upload image to Cloudinary
-    const cloudinaryResponse = await cloudinary.uploader.upload(
-      blogImage.tempFilePath
-    );
+    const cloudinaryResponse = await cloudinary.uploader.upload(blogImage.tempFilePath);
 
     if (!cloudinaryResponse || cloudinaryResponse.error) {
       console.error("Error in Cloudinary upload:", cloudinaryResponse.error);
@@ -57,7 +58,6 @@ export const createBlog = async (req, res) => {
       });
     }
 
-    // Create a new blog post
     const newBlog = new Blog({
       title,
       category,
@@ -71,7 +71,6 @@ export const createBlog = async (req, res) => {
       adminImage,
     });
 
-    // Save the blog post to the database
     await newBlog.save();
 
     return res.status(201).json({
@@ -88,24 +87,22 @@ export const createBlog = async (req, res) => {
   }
 };
 
+// Delete a blog post
 export const deletePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const userid = req?.user?.id?.toString();
+    const userId = req?.user?.id?.toString();
 
-    if (!id || !userid) {
+    if (!id || !userId) {
       return res.status(400).json({
         success: false,
         message: "Missing required parameters.",
       });
     }
 
-    console.log("Post ID:", id, "User ID:", userid);
-
-    // Find and delete the blog post in one query
     const deletedPost = await Blog.findOneAndDelete({
       _id: id,
-      createdBy: userid,
+      createdBy: userId,
     });
 
     if (!deletedPost) {
@@ -117,7 +114,7 @@ export const deletePost = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Post deleted successfully",
+      message: "Post deleted successfully.",
     });
   } catch (err) {
     console.error("Error deleting blog post:", err);
@@ -128,23 +125,24 @@ export const deletePost = async (req, res) => {
   }
 };
 
+// Get all blogs
 export const getAllBlogs = async (req, res) => {
   try {
     const posts = await Blog.find();
-    if (!posts) {
-      return res.status(400).json({
+    if (!posts || posts.length === 0) {
+      return res.status(404).json({
         success: false,
-        message: "No BlogPost Is Found",
+        message: "No blog posts found.",
       });
     }
 
     return res.status(200).json({
       success: true,
       posts,
-      message: "Blog Post Found",
+      message: "Blog posts found.",
     });
   } catch (err) {
-    console.error("Error deleting blog post:", err);
+    console.error("Error fetching blog posts:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",
@@ -152,24 +150,25 @@ export const getAllBlogs = async (req, res) => {
   }
 };
 
+// Get all blogs created by an admin (the authenticated user)
 export const getAllAdminPost = async (req, res) => {
   try {
     const userId = req?.user?.id?.toString();
     const findPost = await Blog.find({ createdBy: userId });
-    if (!findPost) {
-      return res.status(400).json({
+    if (!findPost || findPost.length === 0) {
+      return res.status(404).json({
         success: false,
-        message: "You Have not Created Any Post",
+        message: "You have not created any posts.",
       });
     }
 
     return res.status(200).json({
       success: true,
       posts: findPost,
-      message: "Posts are Found",
+      message: "Posts found.",
     });
   } catch (err) {
-    console.error("Error deleting blog post:", err);
+    console.error("Error fetching admin posts:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",
@@ -177,24 +176,26 @@ export const getAllAdminPost = async (req, res) => {
   }
 };
 
+// Get a single blog post by ID
 export const getSinglePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const findPost = await Blog.findOne({ _id: id });
+    const findPost = await Blog.findById(id);
+
     if (!findPost) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: "You Have not Created Any Post",
+        message: "Post not found.",
       });
     }
 
     return res.status(200).json({
       success: true,
       post: findPost,
-      message: "Posts are Found",
+      message: "Post found.",
     });
   } catch (err) {
-    console.error("Error deleting blog post:", err);
+    console.error("Error fetching blog post:", err);
     return res.status(500).json({
       success: false,
       message: "Internal server error.",
@@ -202,15 +203,12 @@ export const getSinglePost = async (req, res) => {
   }
 };
 
+// Update a blog post
 export const updateBlog = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id?.toString();
 
-    console.log("Blog ID:", id);
-    console.log("User ID:", userId);
-
-    // Validate that both ID and user ID are provided
     if (!id || !userId) {
       return res.status(400).json({
         success: false,
@@ -218,8 +216,7 @@ export const updateBlog = async (req, res) => {
       });
     }
 
-    // Filter out any fields that should not be updated
-    const allowedUpdates = ["title", "category", "about", "blogImage"]; // List of fields you want to allow updating
+    const allowedUpdates = ["title", "category", "about", "blogImage"];
     const updates = Object.keys(req.body).reduce((acc, key) => {
       if (allowedUpdates.includes(key)) {
         acc[key] = req.body[key];
@@ -227,13 +224,12 @@ export const updateBlog = async (req, res) => {
       return acc;
     }, {});
 
-    // Update the blog post
     const updatedBlog = await Blog.findOneAndUpdate(
       { _id: id, createdBy: userId },
-      updates, // Use the filtered updates object
+      updates,
       {
         new: true,
-        runValidators: true, // Ensure validation checks are run on updates
+        runValidators: true,
       }
     );
 
