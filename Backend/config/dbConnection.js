@@ -5,7 +5,7 @@ dotenv.config();
 const dbConnection = async () => {
   try {
     mongoose
-      .connect(process.env.DATABASE_URI)
+      .connect("mongodb://127.0.0.1/blogApp")
       .then(() => {
         console.log("Data Base Connected Successfully");
       })
