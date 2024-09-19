@@ -24,7 +24,7 @@ app.use(cors({ origin: "https://blog-app-frontend-9z9y.onrender.com", credential
 app.use(
   fileUpload({
     useTempFiles: true,
-    tempFileDir: "/temp/",
+    tempFileDir: "/temp",
   })
 );
 
