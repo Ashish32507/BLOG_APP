@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "https://blog-app-frontend-9z9y.onrender.com", // Use environment variable for origin if available
+  origin:"https://blog-app-frontend-9z9y.onrender.com", // Use environment variable for origin if available
   credentials: true,
 }));
 
