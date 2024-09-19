@@ -1,5 +1,5 @@
-import { BlogModel } from "../model/BlogModel.js";
-import { UserModel } from "../model/UserSchema.js";
+import { Blog } from "../model/BlogModel.js";
+import { User } from "../model/UserSchema.js";
 import cloudinary from "cloudinary";
 
 export const createBlog = async (req, res) => {
@@ -58,7 +58,7 @@ export const createBlog = async (req, res) => {
     }
 
     // Create a new blog post
-    const newBlog = new BlogModel({
+    const newBlog = new Blog({
       title,
       category,
       about,
@@ -103,7 +103,7 @@ export const deletePost = async (req, res) => {
     console.log("Post ID:", id, "User ID:", userid);
 
     // Find and delete the blog post in one query
-    const deletedPost = await BlogModel.findOneAndDelete({
+    const deletedPost = await Blog.findOneAndDelete({
       _id: id,
       createdBy: userid,
     });
@@ -130,7 +130,7 @@ export const deletePost = async (req, res) => {
 
 export const getAllBlogs = async (req, res) => {
   try {
-    const posts = await BlogModel.find();
+    const posts = await Blog.find();
     if (!posts) {
       return res.status(400).json({
         success: false,
@@ -155,7 +155,7 @@ export const getAllBlogs = async (req, res) => {
 export const getAllAdminPost = async (req, res) => {
   try {
     const userId = req?.user?.id?.toString();
-    const findPost = await BlogModel.find({ createdBy: userId });
+    const findPost = await Blog.find({ createdBy: userId });
     if (!findPost) {
       return res.status(400).json({
         success: false,
@@ -180,7 +180,7 @@ export const getAllAdminPost = async (req, res) => {
 export const getSinglePost = async (req, res) => {
   try {
     const { id } = req.params;
-    const findPost = await BlogModel.findOne({ _id: id });
+    const findPost = await Blog.findOne({ _id: id });
     if (!findPost) {
       return res.status(400).json({
         success: false,
@@ -228,7 +228,7 @@ export const updateBlog = async (req, res) => {
     }, {});
 
     // Update the blog post
-    const updatedBlog = await BlogModel.findOneAndUpdate(
+    const updatedBlog = await Blog.findOneAndUpdate(
       { _id: id, createdBy: userId },
       updates, // Use the filtered updates object
       {
