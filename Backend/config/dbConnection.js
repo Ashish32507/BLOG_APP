@@ -5,7 +5,7 @@ dotenv.config();
 const dbConnection = async () => {
   try {
     mongoose
-      .connect("mongodb+srv://ashishkumaryadavcse507:<db_password>@cluster0.cpt9r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0/BlogApp")
+      .connect("mongodb+srv://ashishkumaryadavcse507:JBNLfh40VAMjR9nP@cluster0.cpt9r.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0/BlogApp")
       .then(() => {
         console.log("Data Base Connected Successfully");
       })
