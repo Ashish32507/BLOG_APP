@@ -41,7 +41,7 @@ function Signup() {
 
     try {
       const response = await axios.post(
-        `${USER_API_END_POINT}/register`,
+        `https://blog-app-qdrv.onrender.com/register`,
         formDataToSend,
         {
           headers: { "Content-Type": "multipart/form-data" },
