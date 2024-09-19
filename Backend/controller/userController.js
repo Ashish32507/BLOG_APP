@@ -1,4 +1,4 @@
-import { UserModel } from "../model/UserSchema.js";
+import { User } from "../model/UserSchema.js";
 import cloudinary from "cloudinary";
 import bcryptjs from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -46,7 +46,7 @@ export const register = async (req, res) => {
     }
 
     // Check if user already exists
-    const userExists = await UserModel.findOne({ email });
+    const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({
         success: false,
@@ -58,7 +58,7 @@ export const register = async (req, res) => {
     const hashedPassword = await bcryptjs.hash(password, 10);
 
     // Create new user
-    const newUser = await UserModel.create({
+    const newUser = await User.create({
       email,
       name,
       phone,
@@ -124,7 +124,7 @@ export const login = async (req, res) => {
     }
 
     // Find user by email
-    const user = await UserModel.findOne({ email });
+    const user = await User.findOne({ email });
 
     // If user is not found
     if (!user) {
@@ -219,7 +219,7 @@ export const logout = async (req, res) => {
 export const profile = async (req, res) => {
   try {
     const userId = req?.user?.id;
-    const findUser = await UserModel.findById(userId);
+    const findUser = await User.findById(userId);
 
     if (!findUser) {
       return res.status(400).json({
@@ -247,7 +247,7 @@ export const profile = async (req, res) => {
 
 export const getAdmins = async (req, res) => {
   try {
-    const findUsers = await UserModel.find({ role: "admin" });
+    const findUsers = await User.find({ role: "admin" });
 
     if (findUsers.length === 0) {
       return res.status(400).json({
@@ -285,7 +285,7 @@ export const updateUserProfile = async (req, res) => {
     const { name, email, phone, education } = req.body;
     const image = req.file;
 
-    const user = await UserModel.findById(userId);
+    const user = await User.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
