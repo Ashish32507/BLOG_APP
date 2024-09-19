@@ -8,7 +8,7 @@ import multer from "multer"; // Ensure multer is imported for image upload handl
 export const register = async (req, res) => {
   try {
     const { email, name, phone, password, role, education } = req.body;
-    const { photo } = req.file;
+    const { photo } = req.files;
 
     // Validate required fields
     if (!email || !name || !phone || !password || !role || !education) {
